@@ -15,24 +15,46 @@ class Point:
         return Point(self.x / scalar, self.y / scalar)
     
     @classmethod
-    def random(self, min: float = -5, max: float = 5):
-        return Point(random.uniform(min, max), random.uniform(min, max))
+    def random(self, x_min: float = 0, x_max: float = 1, y_min: float = 0, y_max: float = 1):
+        return Point(random.uniform(x_min, x_max),
+                     random.uniform(y_min, y_max))
 
-class SierpinskyTriangle:
-    def __init__(self, a: tuple, b: tuple, c: tuple, max_iter: int = 1000):
-        self.a = a
-        self.b = b
-        self.c = c
-        self.max_iter = max_iter
+    @classmethod
+    def random_polygon(self, corners: list['Point']):
+        bounds = [min(p.x for p in corners), max(p.x for p in corners),
+                  min(p.y for p in corners), max(p.y for p in corners)]
+        
+        while True:
+            guess = Point.random(*bounds)
+            
+            for c in corners:
+                if guess.is_inside_polygon(corners):
+                    return guess
     
-    def __iter__(self):
-        start = Point.random()
-        for _ in range(self.max_iter):
-            r = random.random()
-            if r < 1/3:
-                start = Point((start.x + self.a[0]) / 2, (start.y + self.a[1]) / 2)
-            elif r < 2/3:
-                start = Point((start.x + self.b[0]) / 2, (start.y + self.b[1]) / 2)
-            else:
-                start = Point((start.x + self.c[0]) / 2, (start.y + self.c[1]) / 2)
-            yield start
+    # https://wrfranklin.org/Research/Short_Notes/pnpoly.html
+    def is_inside_polygon(self, corners: list['Point']):
+        for c1, c2 in zip(corners, reversed(corners)):
+            if (c1.y > self.y) != (c2.y > self.y):
+                if (self.x < (c2.x - c1.x) * (self.y - c1.y) / (c2.y - c1.y) + c1.x):
+                    return False
+        return True
+    
+class SierpinskyTriangle:
+    def __init__(self, corners: list[Point]):
+        self.corners = corners.copy()
+        self.points = corners.copy()
+        self.last_new = [Point.random_polygon(self.corners)]
+        self.N = 0
+    
+    def generate_triangle(self) -> None:  
+        new_points = []      
+        for p1 in self.last_new:
+            for p2 in self.corners:
+                new_points.append(Point(
+                    (p1.x + p2.x) / 2,
+                    (p1.y + p2.y) / 2
+                ))
+        self.points += new_points
+        self.N += 1
+        self.last_new = new_points
+    
