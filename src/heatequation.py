@@ -3,13 +3,21 @@ from scipy.spatial import KDTree
 
 from numba import njit
 from numba.typed import List as TypedList
+from tqdm import tqdm
 import numpy as np
 
 
+
 @njit
-def _update_temperature_numba(temp, alpha, dt, nn_indices):
+def _update_temperature_numba(temp, alpha, dt, nn_indices, source):
     new_temperature = temp.copy()
     for i in range(len(temp)):
+        
+        source_temp = source[i]
+        if source_temp != 0:
+            new_temperature[i] = source_temp
+            continue
+        
         neighbors = nn_indices[i]
         if len(neighbors) > 0:
             sum_temp = 0.0
@@ -24,11 +32,15 @@ def _update_temperature_numba(temp, alpha, dt, nn_indices):
 def convert_to_numba_list(pylist):
     typed_list = TypedList()
     for sub in pylist:
-        sublist = TypedList()
-        for val in sub:
-            sublist.append(val)
-        typed_list.append(sublist)
+        if isinstance(sub, list):
+            sublist = TypedList()
+            for val in sub:
+                sublist.append(val)
+            typed_list.append(sublist)
+        else:
+            typed_list.append(sub)
     return typed_list
+
 
 class ThermalSimulation:
     def __init__(self, points: list[Point], alpha: float = 0.01, use_numba: bool = True): 
@@ -42,16 +54,23 @@ class ThermalSimulation:
         self.alpha = alpha
         
         self.use_numba = use_numba
+        
+        self.source = [0] * len(self.points)
+        if use_numba:
+            self.source_numba = None
     
     def place_source(self, point: Point, temp: float, radius: float) -> None:
         heated_indices = self.tree.query_ball_point((point.x, point.y), r=radius, workers=-1)
         for idx in heated_indices:
-            self.temperature[idx] = temp
+            self.source[idx] += temp
+            self.temperature[idx] += temp
+        
+        if self.use_numba:
+            self.source_numba = convert_to_numba_list(self.source)
     
     def update_temperature(self, dt: float) -> None:
         if self.use_numba:
-            
-            self.temperature = _update_temperature_numba(self.temperature, self.alpha, dt, self.nn_indices)
+            self.temperature = _update_temperature_numba(self.temperature, self.alpha, dt, self.nn_indices, self.source_numba)
             return
         
         new_temperature = np.copy(self.temperature)
@@ -67,7 +86,7 @@ class ThermalSimulation:
         steps = int(t_max / dt)
         if save_series:
             temps = np.zeros((steps, len(self.points)))
-        for i in range(steps):
+        for i in tqdm(range(steps), desc="Simulation Steps", total=steps, leave=False):
             self.update_temperature(dt)
             if save_series:
                 temps[i] = self.temperature
