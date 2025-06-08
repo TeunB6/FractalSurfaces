@@ -47,8 +47,6 @@ class ThermalSimulation:
         heated_indices = self.tree.query_ball_point((point.x, point.y), r=radius, workers=-1)
         for idx in heated_indices:
             self.temperature[idx] = temp
-
-
     
     def update_temperature(self, dt: float) -> None:
         if self.use_numba:
