@@ -1,4 +1,5 @@
 import random
+import math
 
 class Point:
     def __init__(self, x: float, y: float):
@@ -31,19 +32,41 @@ class Point:
                 if guess.is_inside_polygon(corners):
                     return guess
     
-    # https://wrfranklin.org/Research/Short_Notes/pnpoly.html
+    # # https://wrfranklin.org/Research/Short_Notes/pnpoly.html
+    # def is_inside_polygon(self, corners: list['Point']):
+    #     # Currenlty there are some issues with this
+    #     for c1, c2 in zip(corners[1:], corners[:-1]):
+    #         if (c1.y > self.y) != (c2.y > self.y):
+    #             if (self.x < (c2.x - c1.x) * (self.y - c1.y) / (c2.y - c1.y) + c1.x):
+    #                 return False
+    #     return True
+    
     def is_inside_polygon(self, corners: list['Point']):
-        for c1, c2 in zip(corners, reversed(corners)):
-            if (c1.y > self.y) != (c2.y > self.y):
-                if (self.x < (c2.x - c1.x) * (self.y - c1.y) / (c2.y - c1.y) + c1.x):
-                    return False
-        return True
+        
+        
+        def ccw_order(points):
+            cx = sum(p.x for p in points) / len(points)
+            cy = sum(p.y for p in points) / len(points)
+            return sorted(points, key=lambda p: math.atan2(p.y - cy, p.x - cx))
+        corners = ccw_order(corners)
+        n = len(corners)
+        inside = True
+        for i in range(n):
+            c1 = corners[i]
+            c2 = corners[(i + 1) % n]  # Next vertex (wraps around)
+            # Check if the point is on the "inside" side of every edge
+            cross_product = (c2.x - c1.x) * (self.y - c1.y) - (c2.y - c1.y) * (self.x - c1.x)
+            if cross_product < 0:  # Assuming counter-clockwise winding
+                inside = False
+                break
+        return inside
     
 class SierpinskyTriangle:
     def __init__(self, corners: list[Point]):
         self.corners = corners.copy()
         self.points = corners.copy()
         self.last_new = [Point.random_polygon(self.corners)]
+        self.points.append(self.last_new[0])
         self.N = 0
     
     def generate_triangle(self) -> None:  
