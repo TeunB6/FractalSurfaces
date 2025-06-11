@@ -1,2 +1,2 @@
 # Info
-Thermal Diffusion on Fractal surfaces Project for the Astronomy course Numerical Methods by group 1.12 (Teun Boersma and Joanna Pegiel)
+Thermal Diffusion on Fractal surfaces Project for the Astronomy course Numerical Methods by group 1.12 (Teun Boersma and Joanna Pegiel). The files in src contain the actual classes and things used in our code. The two notebooks contain the applications. As we were asked to submit only *.py files, we also exported these with just the code as .py files (which is not much different :)))
