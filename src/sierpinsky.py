@@ -1,5 +1,6 @@
 import random
 import math
+import matplotlib.pyplot as plt
 
 class Point:
     def __init__(self, x: float, y: float):
@@ -9,12 +10,6 @@ class Point:
     def __repr__(self):
         return f"Point({self.x}, {self.y})"
 
-    def __add__(self, other):
-        return Point(self.x + other.x, self.y + other.y)
-
-    def __truediv__(self, scalar: float):
-        return Point(self.x / scalar, self.y / scalar)
-    
     @classmethod
     def random(self, x_min: float = 0, x_max: float = 1, y_min: float = 0, y_max: float = 1):
         return Point(random.uniform(x_min, x_max),
@@ -42,12 +37,6 @@ class Point:
     #     return True
     
     def is_inside_polygon(self, corners: list['Point']):
-        
-        
-        def ccw_order(points):
-            cx = sum(p.x for p in points) / len(points)
-            cy = sum(p.y for p in points) / len(points)
-            return sorted(points, key=lambda p: math.atan2(p.y - cy, p.x - cx))
         corners = ccw_order(corners)
         n = len(corners)
         inside = True
@@ -60,15 +49,21 @@ class Point:
                 inside = False
                 break
         return inside
+
+def ccw_order(points):
+    cx = sum(p.x for p in points) / len(points)
+    cy = sum(p.y for p in points) / len(points)
+    return sorted(points, key=lambda p: math.atan2(p.y - cy, p.x - cx))
     
 class SierpinskyTriangle:
     def __init__(self, corners: list[Point]):
-        self.corners = corners.copy()
+        self.corners = ccw_order(corners.copy())
         self.points = corners.copy()
-        self.last_new = [Point.random_polygon(self.corners)]
-        self.points.append(self.last_new[0])
+        self.start = Point((self.corners[0].x + self.corners[1].x)/2, (self.corners[0].y + self.corners[1].y)/2)
+
+        self.last_new = [self.start]
         self.N = 0
-    
+            
     def generate_triangle(self) -> None:  
         new_points = []      
         for p1 in self.last_new:
@@ -79,5 +74,28 @@ class SierpinskyTriangle:
                 ))
         self.points += new_points
         self.N += 1
-        self.last_new = new_points
+        self.last_new = new_points.copy()
+        
+    def plot(self, title: str) -> plt.Figure:
+        fig, ax = plt.subplots()
+        xx = [p.x for p in self.points]
+        yy = [p.y for p in self.points]
+        
+        ax.scatter([p.x for p in self.corners], [p.y for p in self.corners], s=40, color='blue', marker='o', label='Corners')
+        ax.scatter(self.start.x, self.start.y, s=40, color='orange', marker='o', label='Start')
+
+        ax.scatter(xx, yy, s=1, color='black', marker='^')
+        ax.set_title(title)
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+
+        ax.set_xlim(min(xx) - 0.1, max(xx) + 0.1)
+        ax.set_ylim(min(yy) - 0.1, max(yy) + 0.1)
+
+        ax.grid(True)
+        ax.set_aspect('equal')
+        return fig
+            
+        
+        
     
